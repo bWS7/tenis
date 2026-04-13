@@ -1,0 +1,81 @@
+version: "3.9"
+
+# ─── Desenvolvimento local ────────────────────────────────────────────────────
+# Para produção use o Dockerfile na raiz com Railway ou Render
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: tennishub
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+
+  # App em modo produção local (usa Dockerfile da raiz)
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      DATABASE_URL: postgresql://postgres:postgres@postgres:5432/tennishub
+      NEXTAUTH_SECRET: ${NEXTAUTH_SECRET:-dev-nextauth-secret-32chars-min}
+      NEXTAUTH_URL: http://localhost:3000
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-dev-secret}
+      RESEND_API_KEY: ${RESEND_API_KEY:-}
+      NODE_ENV: production
+    depends_on:
+      postgres:
+        condition: service_healthy
+    profiles:
+      - prod   # rodar com: docker compose --profile prod up
+
+  # Scrapers
+  scraper-fpt:
+    build:
+      context: ./packages/connectors/fpt
+      dockerfile: Dockerfile
+    restart: "no"
+    environment:
+      API_BASE_URL: http://web:3000
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-dev-secret}
+      SCRAPER_HEADLESS: "true"
+    depends_on:
+      - web
+    profiles:
+      - scraper
+
+  scraper-cbt:
+    build:
+      context: ./packages/connectors/cbt
+      dockerfile: Dockerfile
+    restart: "no"
+    environment:
+      API_BASE_URL: http://web:3000
+      INTERNAL_SECRET: ${INTERNAL_SECRET:-dev-secret}
+      SCRAPER_HEADLESS: "true"
+    depends_on:
+      - web
+    profiles:
+      - scraper
+
+volumes:
+  postgres_data:

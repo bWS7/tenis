@@ -1,0 +1,47 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;0,9..40,600;1,9..40,400&family=DM+Mono:wght@400;500&display=swap');
+
+:root {
+  --font-geist-sans: 'DM Sans', system-ui, sans-serif;
+  --font-geist-mono: 'DM Mono', monospace;
+  --font-clash: 'DM Sans', system-ui, sans-serif;
+
+  --brand-50:  #f0faf4;
+  --brand-100: #d9f3e4;
+  --brand-500: #25976A;
+  --brand-600: #1a7a54;
+  --brand-700: #16623f;
+  --brand-900: #12402b;
+
+  --radius: 0.75rem;
+}
+
+* { box-sizing: border-box; padding: 0; margin: 0; }
+
+html {
+  font-family: var(--font-geist-sans);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  background: #f8faf9;
+  color: #111827;
+  line-height: 1.6;
+}
+
+@media (prefers-color-scheme: dark) {
+  body {
+    background: #0a0f0c;
+    color: #e5f0ea;
+  }
+}
+
+.scrollbar-hide {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+.scrollbar-hide::-webkit-scrollbar { display: none; }

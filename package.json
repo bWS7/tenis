@@ -1,0 +1,23 @@
+{
+  "name": "tennis-hub",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "turbo run dev",
+    "build": "turbo run build",
+    "start": "cd apps/web && npm start",
+    "db:push": "cd apps/web && npx prisma db push",
+    "db:migrate": "cd apps/web && npx prisma migrate deploy",
+    "db:seed": "cd packages/db && npx tsx seed.ts",
+    "db:setup": "npm run db:migrate && npm run db:seed",
+    "postinstall": "cd apps/web && npx prisma generate"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0"
+  }
+}

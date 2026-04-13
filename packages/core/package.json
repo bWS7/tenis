@@ -1,0 +1,12 @@
+{
+  "name": "@tennis-hub/core",
+  "version": "0.1.0",
+  "main": "./src/eligibility.ts",
+  "exports": {
+    ".": "./src/eligibility.ts",
+    "./eligibility": "./src/eligibility.ts"
+  },
+  "devDependencies": {
+    "typescript": "^5.4.0"
+  }
+}

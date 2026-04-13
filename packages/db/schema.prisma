@@ -1,0 +1,356 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── USUÁRIOS & AUTENTICAÇÃO ────────────────────────────────────────────────
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  passwordHash    String
+  role            String    @default("player") // player | admin
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  consentVersion  String?
+  consentedAt     DateTime?
+  status          String    @default("active") // active | locked | pending_verification
+
+  playerProfiles  PlayerProfile[]
+  auditLogs       AuditLog[]
+}
+
+model PlayerProfile {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName      String
+  birthYear        Int
+  birthDate        DateTime?
+  gender           String?   // M | F
+  homeState        String?
+  travelRadiusKm   Int       @default(100)
+  competitiveLevel String    @default("amateur") // amateur | federated | youth | pro
+  isDefault        Boolean   @default(false)
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+
+  categories       PlayerProfileCategory[]
+  watchlistItems   WatchlistItem[]
+
+  @@index([userId])
+}
+
+model PlayerProfileCategory {
+  id              String        @id @default(cuid())
+  playerProfileId String
+  playerProfile   PlayerProfile @relation(fields: [playerProfileId], references: [id], onDelete: Cascade)
+  taxonomy        String        // FPT_CLASS | FPT_AGE | CBT_AGE
+  code            String        // "4" | "35+" | "14F"
+  isPrimary       Boolean       @default(false)
+  confidence      String        @default("self_declared") // self_declared | verified
+
+  @@unique([playerProfileId, taxonomy, code])
+}
+
+// ─── ORGANIZAÇÕES & FONTES ──────────────────────────────────────────────────
+
+model Organization {
+  id          String       @id @default(cuid())
+  name        String
+  shortName   String?
+  type        String       // confederation | federation | platform | club
+  websiteUrl  String?
+  logoUrl     String?
+  state       String?
+  isActive    Boolean      @default(true)
+  createdAt   DateTime     @default(now())
+
+  tournaments Tournament[]
+  dataSources DataSource[]
+}
+
+model DataSource {
+  id                String         @id @default(cuid())
+  organizationId    String
+  organization      Organization   @relation(fields: [organizationId], references: [id])
+  sourceName        String
+  sourceType        String         // html | pdf | manual | api
+  baseUrl           String
+  enabled           Boolean        @default(true)
+  fetchScheduleCron String?
+  priority          Int            @default(1)
+  legalNotes        String?
+  lastFetchedAt     DateTime?
+  createdAt         DateTime       @default(now())
+
+  ingestionRuns     IngestionRun[]
+
+  @@index([organizationId])
+}
+
+model IngestionRun {
+  id           String              @id @default(cuid())
+  dataSourceId String
+  dataSource   DataSource          @relation(fields: [dataSourceId], references: [id])
+  startedAt    DateTime            @default(now())
+  finishedAt   DateTime?
+  status       String              // running | success | failed | partial
+  errorSummary String?
+  metricsJson  Json?               // { parsed: N, inserted: N, updated: N, errors: N }
+
+  artifacts    IngestionArtifact[]
+
+  @@index([dataSourceId, startedAt])
+}
+
+model IngestionArtifact {
+  id             String       @id @default(cuid())
+  ingestionRunId String
+  ingestionRun   IngestionRun @relation(fields: [ingestionRunId], references: [id])
+  artifactType   String       // html | pdf | json
+  storagePath    String
+  checksum       String?      // SHA-256 para detecção de mudança
+  fetchedAt      DateTime     @default(now())
+  sourceUrl      String
+  sizeBytes      Int?
+}
+
+// ─── TORNEIOS ───────────────────────────────────────────────────────────────
+
+model Tournament {
+  id             String              @id @default(cuid())
+  canonicalName  String
+  canonicalSlug  String              @unique
+  organizationId String
+  organization   Organization        @relation(fields: [organizationId], references: [id])
+  modalidade     String              @default("tenis") // tenis | beach_tennis | padel
+  createdAt      DateTime            @default(now())
+
+  editions       TournamentEdition[]
+
+  @@index([organizationId])
+}
+
+model TournamentEdition {
+  id                String    @id @default(cuid())
+  tournamentId      String
+  tournament        Tournament @relation(fields: [tournamentId], references: [id])
+  seasonYear        Int
+  startAt           DateTime?
+  endAt             DateTime?
+  entryOpenAt       DateTime?
+  entryCloseAt      DateTime?
+
+  status            String    @default("unknown")
+  // unknown | announced | open | closing_soon | closed | draws_published | in_progress | finished | canceled
+
+  venueName         String?
+  venueCity         String?
+  venueState        String?
+  venueAddress      String?
+  venueLat          Float?
+  venueLng          Float?
+
+  officialSourceUrl String?
+  sourceName        String?
+  fetchedAt         DateTime?
+  rawHtmlHash       String?   // SHA-256 snapshot para detecção diff
+  dataConfidence    String    @default("low") // low | med | high
+  dataOrigin        String    @default("scraped") // scraped | manual | api
+
+  reviewedAt        DateTime?
+  reviewedBy        String?
+  isManualOverride  Boolean   @default(false)
+
+  notes             String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  categories        TournamentCategory[]
+  links             TournamentLink[]
+  changeEvents      TournamentChangeEvent[]
+  watchlistItems    WatchlistItem[]
+  ruleBindings      TournamentRuleBinding[]
+
+  @@unique([tournamentId, seasonYear])
+  @@index([entryCloseAt])
+  @@index([venueState, startAt])
+  @@index([status])
+}
+
+model TournamentCategory {
+  id                  String            @id @default(cuid())
+  tournamentEditionId String
+  tournamentEdition   TournamentEdition @relation(fields: [tournamentEditionId], references: [id], onDelete: Cascade)
+  sourceCategoryText  String            // texto bruto da fonte, ex: "4M1 - Gold"
+  normalizedCode      String?           // ex: "4M1", "35+", "14F"
+  genderScope         String?           // M | F | Mixed
+  classCode           String?           // 1|2|3|4|5|PR|PRO (classes técnicas)
+  minAge              Int?
+  maxAge              Int?
+  ageType             String?           // exact | minimum (seniors)
+  priceBrl            Decimal?          @db.Decimal(10, 2)
+  priceRaw            String?           // texto original do preço
+  maxPlayers          Int?
+  visibilityOrder     Int               @default(0)
+  eligibilityRulesJson Json?            // regras específicas em JSON
+
+  @@index([tournamentEditionId])
+}
+
+model TournamentLink {
+  id                  String            @id @default(cuid())
+  tournamentEditionId String
+  tournamentEdition   TournamentEdition @relation(fields: [tournamentEditionId], references: [id], onDelete: Cascade)
+  linkType            String            // registration | regulation | results | draws
+  url                 String
+  label               String?
+  isOfficial          Boolean           @default(true)
+  sourceName          String?
+  fetchedAt           DateTime?
+}
+
+model TournamentChangeEvent {
+  id                  String            @id @default(cuid())
+  tournamentEditionId String
+  tournamentEdition   TournamentEdition @relation(fields: [tournamentEditionId], references: [id])
+  eventType           String            // deadline_changed | dates_changed | status_changed | canceled | price_changed | docs_updated
+  fieldChangesJson    Json              // { field: "entryCloseAt", from: "...", to: "..." }
+  detectedAt          DateTime          @default(now())
+  sourceRunId         String?
+
+  @@index([tournamentEditionId, detectedAt])
+}
+
+// ─── REGRAS DE ELEGIBILIDADE ─────────────────────────────────────────────────
+
+model RuleSet {
+  id       String        @id @default(cuid())
+  scope    String        // FPT | CBT | FMT
+  name     String
+  versions RuleVersion[]
+}
+
+model RuleVersion {
+  id            String              @id @default(cuid())
+  ruleSetId     String
+  ruleSet       RuleSet             @relation(fields: [ruleSetId], references: [id])
+  version       String
+  effectiveFrom DateTime
+  effectiveTo   DateTime?
+  sourceUrl     String?
+  fetchedAt     DateTime?
+  status        String              @default("active") // active | deprecated | draft
+
+  clauses       RuleClause[]
+  bindings      TournamentRuleBinding[]
+}
+
+model RuleClause {
+  id            String      @id @default(cuid())
+  ruleVersionId String
+  ruleVersion   RuleVersion @relation(fields: [ruleVersionId], references: [id])
+  clauseType    String      // age | class | membership | gender | ranking
+  logicJson     Json        // { minAge: 35, maxAge: null, allowDown: true }
+  humanText     String      // "Categoria para jogadores com 35 anos ou mais no ano civil"
+  categoryCode  String?     // a qual categoria se aplica
+}
+
+model TournamentRuleBinding {
+  id                  String            @id @default(cuid())
+  tournamentEditionId String
+  tournamentEdition   TournamentEdition @relation(fields: [tournamentEditionId], references: [id])
+  ruleVersionId       String
+  ruleVersion         RuleVersion       @relation(fields: [ruleVersionId], references: [id])
+  bindingReason       String?
+}
+
+// ─── WATCHLIST & ALERTAS ─────────────────────────────────────────────────────
+
+model WatchlistItem {
+  id                  String            @id @default(cuid())
+  playerProfileId     String
+  playerProfile       PlayerProfile     @relation(fields: [playerProfileId], references: [id], onDelete: Cascade)
+  tournamentEditionId String
+  tournamentEdition   TournamentEdition @relation(fields: [tournamentEditionId], references: [id])
+  userStatus          String            @default("pretendo")
+  // pretendo | inscrito_declarado | desisti | concluido
+  alertPrefsJson      Json?             // { emailD7: true, emailD2: true, emailD0: true, onStatusChange: true }
+  createdAt           DateTime          @default(now())
+
+  notifications       Notification[]
+
+  @@unique([playerProfileId, tournamentEditionId])
+  @@index([tournamentEditionId])
+}
+
+model Notification {
+  id              String        @id @default(cuid())
+  watchlistItemId String
+  watchlistItem   WatchlistItem @relation(fields: [watchlistItemId], references: [id], onDelete: Cascade)
+  channel         String        // email | push | in_app
+  type            String        // deadline_reminder | status_change | draws_published | canceled
+  subject         String
+  bodyJson        Json
+  sentAt          DateTime?
+  readAt          DateTime?
+  createdAt       DateTime      @default(now())
+
+  @@index([watchlistItemId, createdAt])
+}
+
+// ─── AUDITORIA ───────────────────────────────────────────────────────────────
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  actor      User     @relation(fields: [actorId], references: [id])
+  action     String   // create | update | delete | override | review
+  entityType String
+  entityId   String
+  diffJson   Json?
+  reason     String?
+  createdAt  DateTime @default(now())
+
+  @@index([entityType, entityId])
+  @@index([actorId, createdAt])
+}
+
+// ─── MARKETPLACE BASE (RF-036 / FN-MKT-001) ──────────────────────────────────
+// Desabilitado no MVP — schema pronto para fase futura
+
+model Merchant {
+  id           String   @id @default(cuid())
+  name         String
+  description  String?
+  websiteUrl   String?
+  contactEmail String?
+  city         String?
+  state        String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  offers       Offer[]
+}
+
+model Offer {
+  id            String   @id @default(cuid())
+  merchantId    String
+  merchant      Merchant @relation(fields: [merchantId], references: [id])
+  title         String
+  description   String?
+  category      String   // equipment | stringing | coaching | travel | other
+  priceBrl      Decimal? @db.Decimal(10, 2)
+  isActive      Boolean  @default(false)
+  targetCity    String?
+  targetState   String?
+  targetOrgSlug String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([targetState, isActive])
+}

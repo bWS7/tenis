@@ -1,0 +1,16 @@
+{
+  "name": "@tennis-hub/jobs",
+  "version": "0.1.0",
+  "scripts": {
+    "alerts": "tsx alert-dispatcher.ts",
+    "diff": "tsx diff-job.ts"
+  },
+  "dependencies": {
+    "@prisma/client": "^5.14.0",
+    "date-fns": "^3.6.0"
+  },
+  "devDependencies": {
+    "tsx": "^4.11.0",
+    "typescript": "^5.4.0"
+  }
+}
