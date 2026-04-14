@@ -27,7 +27,7 @@ CBT_TOURNAMENTS = f"{CBT_BASE}/tournaments-central"
 TI_BASE         = "https://www.tenisintegrado.com.br"
 TI_TOURNAMENTS  = f"{TI_BASE}/new_torneio/index_tournament/2"
 
-API_BASE_URL    = os.getenv("API_BASE_URL", "http://localhost:3000")
+API_BASE_URL    = os.getenv("API_BASE_URL") or "http://localhost:3000"
 INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "dev-secret")
 HEADLESS        = os.getenv("SCRAPER_HEADLESS", "true").lower() == "true"
 

@@ -25,7 +25,7 @@ import pdfplumber
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 logger = logging.getLogger("pdf-rules")
 
-API_BASE_URL    = os.getenv("API_BASE_URL", "http://localhost:3000")
+API_BASE_URL    = os.getenv("API_BASE_URL") or "http://localhost:3000"
 INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "dev-secret")
 
 

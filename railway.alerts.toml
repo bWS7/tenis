@@ -1,0 +1,7 @@
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile.alerts"
+
+[deploy]
+startCommand = "npx tsx packages/jobs/alert-dispatcher.ts"
+restartPolicyType = "NEVER"

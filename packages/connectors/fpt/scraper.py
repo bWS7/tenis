@@ -29,7 +29,7 @@ logger = logging.getLogger("scraper.fpt")
 
 FPT_BASE_URL    = "https://sisfpt.com.br"
 FPT_TOURNAMENTS = f"{FPT_BASE_URL}/area-publica/torneios/abertos"
-API_BASE_URL    = os.getenv("API_BASE_URL", "http://localhost:3000")
+API_BASE_URL    = os.getenv("API_BASE_URL") or "http://localhost:3000"
 INTERNAL_SECRET = os.getenv("INTERNAL_SECRET", "dev-secret")
 HEADLESS        = os.getenv("SCRAPER_HEADLESS", "true").lower() == "true"
 
