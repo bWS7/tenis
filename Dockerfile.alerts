@@ -1,0 +1,23 @@
+FROM node:20-alpine
+
+RUN apk add --no-cache libc6-compat openssl
+
+WORKDIR /app
+
+# Copiar manifests dos workspaces para resolver dependências
+COPY package.json turbo.json ./
+COPY apps/web/package.json ./apps/web/
+COPY packages/core/package.json ./packages/core/
+COPY packages/db/package.json ./packages/db/
+COPY packages/jobs/package.json ./packages/jobs/
+
+# Instalar dependências sem rodar postinstall antes do código estar presente
+RUN npm install --ignore-scripts
+
+# Copiar código e gerar o Prisma Client
+COPY . .
+RUN cd apps/web && npx prisma generate
+
+ENV NODE_ENV=production
+
+CMD ["npx", "tsx", "packages/jobs/alert-dispatcher.ts"]

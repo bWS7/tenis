@@ -24,7 +24,6 @@ WORKDIR /app
 
 # Copiar dependências instaladas
 COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules 2>/dev/null || true
 
 # Copiar todo o código fonte
 COPY . .
@@ -59,8 +58,8 @@ COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static
 
 # Copiar Prisma para migrations em runtime
-COPY --from=builder /app/apps/web/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/apps/web/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 COPY --from=builder /app/packages/db/schema.prisma ./packages/db/schema.prisma
 COPY --from=builder /app/packages/db/seed.ts ./packages/db/seed.ts
 COPY --from=builder /app/packages/db/package.json ./packages/db/package.json

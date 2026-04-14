@@ -1,0 +1,13 @@
+.git
+.gitignore
+.next
+.turbo
+node_modules
+**/node_modules
+coverage
+dist
+tmp
+*.log
+.env
+.env.*
+!.env.example
