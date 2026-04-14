@@ -29,7 +29,7 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 
 # Gerar Prisma Client
-RUN cd apps/web && npx prisma generate
+RUN npx prisma generate --schema=packages/db/schema.prisma
 
 # Build Next.js
 ENV NEXT_TELEMETRY_DISABLED=1

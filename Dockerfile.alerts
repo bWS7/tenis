@@ -16,7 +16,7 @@ RUN npm install --ignore-scripts
 
 # Copiar código e gerar o Prisma Client
 COPY . .
-RUN cd apps/web && npx prisma generate
+RUN npx prisma generate --schema=packages/db/schema.prisma
 
 ENV NODE_ENV=production
 
