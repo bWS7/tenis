@@ -19,6 +19,7 @@ async function getHomeData(userId: string) {
   const in14days = addDays(now, 14)
   const sportAge = getSportAge(profile.birthYear)
   const classCode = profile.categories.find(c => c.taxonomy === 'FPT_CLASS')?.code
+  const profileGender = profile.gender
 
   const baseWhere = {
     status: { in: ['open', 'closing_soon', 'announced'] as string[] },
@@ -45,7 +46,7 @@ async function getHomeData(userId: string) {
 
   function countCompatible(categories: any[]): number {
     return categories.filter(cat => {
-      if (profile.gender && cat.genderScope && cat.genderScope !== 'Mixed' && cat.genderScope !== profile.gender) return false
+      if (profileGender && cat.genderScope && cat.genderScope !== 'Mixed' && cat.genderScope !== profileGender) return false
       if (cat.classCode && classCode) {
         const pNum = parseInt(classCode), cNum = parseInt(cat.classCode)
         if (!isNaN(pNum) && !isNaN(cNum)) {
